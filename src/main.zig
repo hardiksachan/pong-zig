@@ -1,24 +1,91 @@
-const std = @import("std");
+const rl = @import("raylib");
+
+const Ball = struct {
+    x: i32,
+    y: i32,
+    radius: f32 = 10,
+    speed_x: i32 = 7,
+    speed_y: i32 = 7,
+    color: rl.Color = rl.Color.white,
+
+    pub fn draw(self: *const Ball) void {
+        rl.drawCircle(self.x, self.y, self.radius, self.color);
+    }
+
+    pub fn update(self: *Ball) void {
+        self.x += self.speed_x;
+        self.y += self.speed_y;
+
+        if (self.x + @as(i32, @intFromFloat(self.radius)) >= rl.getScreenWidth() or self.x - @as(i32, @intFromFloat(self.radius)) <= 0) {
+            self.speed_x *= -1;
+        }
+
+        if (self.y + @as(i32, @intFromFloat(self.radius)) >= rl.getScreenHeight() or self.y - @as(i32, @intFromFloat(self.radius)) <= 0) {
+            self.speed_y *= -1;
+        }
+    }
+};
+
+const Paddle = struct {
+    x: i32,
+    y: i32,
+    height: i32 = 120,
+    width: i32 = 25,
+    speed: i32 = 5,
+    color: rl.Color = rl.Color.white,
+
+    pub fn draw(self: *const Paddle) void {
+        rl.drawRectangle(self.x, self.y, self.width, self.height, self.color);
+    }
+
+    pub fn update(self: *Paddle) void {
+        if (rl.isKeyDown(rl.Key.Up)) {
+            self.y -= self.speed;
+        }
+
+        if (rl.isKeyDown(rl.Key.Down)) {
+            self.y += self.speed;
+        }
+
+        if (self.y <= 0) {
+            self.y = 0;
+        }
+
+        if (self.y + self.height >= rl.getScreenHeight()) {
+            self.y = rl.getScreenHeight() - self.height;
+        }
+    }
+};
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    const screenWidth = 1280;
+    const screenHeight = 720;
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    rl.initWindow(screenWidth, screenHeight, "Pong");
+    defer rl.closeWindow();
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    rl.setTargetFPS(60);
 
-    try bw.flush(); // don't forget to flush!
-}
+    var ball = Ball{
+        .x = @divTrunc(rl.getScreenWidth(), 2),
+        .y = @divTrunc(rl.getScreenHeight(), 2),
+    };
 
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
+    var player = Paddle{
+        .x = 10,
+        .y = @divTrunc(rl.getScreenHeight(), 2) - @divTrunc(120, 2),
+    };
+
+    while (!rl.windowShouldClose()) {
+        ball.update();
+        player.update();
+
+        rl.beginDrawing();
+        defer rl.endDrawing();
+
+        rl.clearBackground(rl.Color.black);
+
+        ball.draw();
+        player.draw();
+    }
 }
